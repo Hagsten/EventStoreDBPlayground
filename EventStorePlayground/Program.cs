@@ -1,175 +1,194 @@
 ﻿using EventStore.Client;
+using EventStorePlayground.CommandHandlers;
+using EventStorePlayground.Domain.Events;
+using EventStorePlayground.Projections;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace EventStorePlayground
 {
+
     class Program
     {
         static void Main(string[] args)
         {
             Console.WriteLine("Hello EventStoreDB!");
 
-            DoIt().Wait();
+            SubscribeToEvents().Wait();
+
+            RenderMenu().Wait();
         }
 
-        private static async Task DoIt()
+        private static async Task SubscribeToEvents()
         {
-            var settings = EventStoreClientSettings.Create("esdb://localhost:2113?tls=false&keepAliveInterval=-1&keepAliveTimeout=-1");
+            var store = new Store();
+            var client = new EventStoreClient(EventStoreClientSettings.Create("esdb://localhost:2113?tls=false&keepAliveInterval=-1&keepAliveTimeout=-1"));
 
-            var client = new EventStoreClient(settings);
-            var lastUserEvent = await client.ReadStreamAsync(Direction.Backwards, "users-stream", StreamPosition.End, 1).ToListAsync();
+            await client.SubscribeToStreamAsync("$et-ThingGrabbedEvent", StreamPosition.End,
+                async (subscription, evnt, cancellationToken) =>
+                {
+                    Console.WriteLine($"Received event {evnt.OriginalEventNumber}@{evnt.OriginalStreamId}");
 
-            if(lastUserEvent.Count == 0)
+                    try
+                    {
+                        var e = JsonConvert.DeserializeObject<ThingGrabbedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span));
+
+                        await store.Add("fruit", e.Id, new[] { new FruitEatenEvent(e.Id) });
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("Error in subscr.");
+                    }
+                });
+        }
+
+        public static async Task RenderMenu()
+        {
+            Console.WriteLine("Good day! This is your ultimate basket app");
+
+            await FetchBasket();
+
+            var cmd = "";
+
+            Console.WriteLine("{Thing}.{Action}.{Property} ===> i.e Apple.A.F ==> Adds a Fresh Apple");
+            Console.WriteLine("A:Key ===> Adds a key");
+
+            while ((cmd = Console.ReadLine()) != "exit")
             {
-                await CreateUser(client);
+                if (cmd == "Apple.A.F")
+                {
+                    Console.Write("Adding a nice fresh apple. Give it a unique name: ");
 
-                lastUserEvent = await client.ReadStreamAsync(Direction.Backwards, "users-stream", StreamPosition.End, 1).ToListAsync();
+                    var id = Console.ReadLine();
+
+                    await new AddAppleCommandHandler().Handle("kitchen-basket", id, 0.2M, FruitCondition.Fresh);
+                }
+
+                if (cmd == "Pear.A.F")
+                {
+                    Console.WriteLine("Adding a nice fresh large pear. Give it a unique name: ");
+
+                    var id = Console.ReadLine();
+
+                    await new AddPearCommandHandler().Handle("kitchen-basket", id, 0.34M, FruitCondition.Fresh);
+                }
+
+                if (cmd == "Pear.E" || cmd == "Apple.E")
+                {
+                    Console.WriteLine("Which one do you want to eat?");
+
+                    await new EatFruitCommandHandler().Handle("kitchen-basket", Console.ReadLine());
+
+                    Console.WriteLine("I bet that was yummy!");
+                }
+
+                await FetchBasket();
             }
-
-            var entityId = JsonSerializer.Deserialize<UserAddedEvent>(lastUserEvent.Single().Event.Data.Span).EntityId;
-
-            var addressProvidedEvent = new AddressProvidedEvent("The road 1337", "702 30", "Sweden");
-
-            var addressProvidedEventData = new EventData(
-                Uuid.NewUuid(),
-                "AddressProvidedEvent",
-                JsonSerializer.SerializeToUtf8Bytes(addressProvidedEvent)
-            );
-
-            await client.AppendToStreamAsync(
-                $"address-stream-{entityId}",
-                StreamState.Any,
-                new[] { addressProvidedEventData });
-
-            var user = await client.ReadStreamAsync(
-                Direction.Forwards,
-                $"user-stream-{entityId}",
-                StreamPosition.Start).ToListAsync();
-
-            var userAddress = await client.ReadStreamAsync(
-                Direction.Forwards,
-                $"address-stream-{entityId}",
-                StreamPosition.Start).ToListAsync();
-
-            var events = user.Concat(userAddress).OrderBy(x => x.Event.Created).Select(Deserialize).ToList();
-
-            var model = User.Replay(events);
         }
 
-        private static async Task CreateUser(EventStoreClient client)
+        private static async Task FetchBasket()
         {
-            var userEvent = new UserAddedEvent("Andreas", "Hagsten", true, Guid.NewGuid().ToString("N"));
+            var basketProjection = new BasketProjection();
 
-            var userAddedEventData = new EventData(
-                Uuid.NewUuid(),
-                "UserAddedEvent",
-                JsonSerializer.SerializeToUtf8Bytes(userEvent)
-            );
+            var b = await basketProjection.Project("kitchen-basket");
 
-            await client.AppendToStreamAsync(
-                $"users-stream",
-                StreamState.Any,
-                new[] { userAddedEventData });
+            Console.WriteLine($"There are currently {b.Things.Count} things in your basket. Total weight {b.TotalWeight} kg.");
 
-            await client.AppendToStreamAsync(
-                $"user-stream-{userEvent.EntityId}",
-                StreamState.Any,
-                new[] { userAddedEventData });
+            var apples = b.Things.Where(x => GetTypeOfThing(x) == "Apple").ToArray();
+            var pears = b.Things.Where(x => GetTypeOfThing(x) == "Pear").ToArray();
+
+            Console.WriteLine($"Apples: {apples.Length} with weight of {apples.Sum(x => x.Weight)}kg");
+            Console.WriteLine($"Pears: {pears.Length} with weight of {pears.Sum(x => x.Weight)}kg");
+
+            Console.WriteLine("What do you want to do?");
         }
 
-        private static object Deserialize(ResolvedEvent e)
+        private static string GetTypeOfThing(IThing thing)
         {
-            return e.Event.EventType switch
+            return thing switch
             {
-                "UserAddedEvent" => JsonSerializer.Deserialize<UserAddedEvent>(e.Event.Data.Span),
-                "AddressProvidedEvent" => JsonSerializer.Deserialize<AddressProvidedEvent>(e.Event.Data.Span),
-                _ => throw new NotImplementedException()
-            };
-        }
-    }
-
-
-    public interface IDomainEvent
-    {
-    }
-
-    public class User
-    {
-        public string EntityId { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public Address Address { get; set; }
-        public bool Active { get; set; }
-
-        public static User Replay(ICollection<object> events)
-        {
-            var user = new User();
-
-            foreach (var e in events)
-            {
-                user.Apply((dynamic)e);
-            }
-
-            return user;
-        }
-
-        private void Apply(UserAddedEvent e)
-        {
-            FirstName = e.FirstName;
-            LastName = e.LastName;
-            Active = e.Active;
-        }
-
-        private void Apply(AddressProvidedEvent e)
-        {
-            Address = new Address
-            {
-                Country = e.Country,
-                Street = e.Street,
-                ZipCode = e.ZipCode
+                Apple => "Apple",
+                Pear => "Pear",
+                _ => "Unknown",
             };
         }
 
     }
 
-    public class Address
+    public interface IThing
     {
-        public string Street { get; set; }
-        public string ZipCode { get; set; }
-        public string Country { get; set; }
+        decimal Weight { get; }
+        string Id { get; }
     }
 
-    public class UserAddedEvent : IDomainEvent
+    public interface IFruit : IThing
     {
-        public UserAddedEvent(string firstName, string lastName, bool active, string entityId)
-        {
-            FirstName = firstName;
-            LastName = lastName;
-            Active = active;
-            EntityId = entityId;
-        }
-
-        public string FirstName { get; }
-        public string LastName { get; }
-        public bool Active { get; }
-        public string EntityId { get; }
+        FruitCondition FruitCondition { get; }
     }
 
-    public class AddressProvidedEvent : IDomainEvent
+    public enum FruitCondition
     {
-        public AddressProvidedEvent(string street, string zipCode, string country)
+        Fresh = 0,
+        Mature,
+        Rotten,
+        Decomposed
+    }
+
+    public class Apple : IFruit
+    {
+        public string Id { get; }
+        public decimal Weight { get; }
+        public FruitCondition FruitCondition { get; }
+
+        public Apple(string id, decimal weight, FruitCondition fruitCondition)
         {
-            Street = street;
-            ZipCode = zipCode;
-            Country = country;
+            Id = id;
+            Weight = weight;
+            FruitCondition = fruitCondition;
+        }
+    }
+
+    public class Pear : IFruit
+    {
+        public string Id { get; }
+        public decimal Weight { get; }
+        public FruitCondition FruitCondition { get; }
+
+        public Pear(string id, decimal weight, FruitCondition fruitCondition)
+        {
+            Id = id;
+            Weight = weight;
+            FruitCondition = fruitCondition;
+        }
+    }
+
+    public class SomeFruit : IFruit
+    {
+        public string Id { get; }
+        public decimal Weight { get; }
+        public FruitCondition FruitCondition { get; }
+
+        public SomeFruit(string id, decimal weight, FruitCondition fruitCondition)
+        {
+            Id = id;
+            Weight = weight;
+            FruitCondition = fruitCondition;
+        }
+    }
+
+    public class Key : IThing
+    {
+        public string Id { get; }
+        public decimal Weight { get; }
+
+        public Key(string id, decimal weight)
+        {
+            Id = id;
+            Weight = weight;
         }
 
-        public string Street { get; }
-        public string ZipCode { get; }
-        public string Country { get; }
     }
 }
