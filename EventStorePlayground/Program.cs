@@ -17,24 +17,26 @@ namespace EventStorePlayground
         {
             Console.WriteLine("Hello EventStoreDB!");
 
-            SubscribeToEvents().Wait();
+            SubscribeToFruitGrabbedEvents().Wait();
 
             RenderMenu().Wait();
         }
 
-        private static async Task SubscribeToEvents()
+        //TODO: Another subscription to be added in addition to this.
+        //All things added --> Its own stream. Right? --> Used in Readmodel AllThingsEverPutIntoBasket
+        private static async Task SubscribeToFruitGrabbedEvents()
         {
             var store = new Store();
             var client = new EventStoreClient(EventStoreClientSettings.Create("esdb://localhost:2113?tls=false&keepAliveInterval=-1&keepAliveTimeout=-1"));
 
-            await client.SubscribeToStreamAsync("$et-ThingGrabbedEvent", StreamPosition.End,
+            await client.SubscribeToStreamAsync("$et-FruitGrabbedEvent", StreamPosition.End,
                 async (subscription, evnt, cancellationToken) =>
                 {
                     Console.WriteLine($"Received event {evnt.OriginalEventNumber}@{evnt.OriginalStreamId}");
 
                     try
                     {
-                        var e = JsonConvert.DeserializeObject<ThingGrabbedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span));
+                        var e = JsonConvert.DeserializeObject<FruitGrabbedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span));
 
                         await store.Add("fruit", e.Id, new[] { new FruitEatenEvent(e.Id) });
                     }
@@ -42,12 +44,19 @@ namespace EventStorePlayground
                     {
                         Console.WriteLine("Error in subscr.");
                     }
-                });
+                }, true);
         }
 
         public static async Task RenderMenu()
         {
+            var totalItemsProjection = new TotalItemsProjection();
+            var p = new AllThingsEverPutIntoBasketProjection();
+
+            var currentState = await totalItemsProjection.Project("kitchen-basket");
+            var allStuff = p.Project("kitchen-basket");
+
             Console.WriteLine("Good day! This is your ultimate basket app");
+            Console.WriteLine($"There are currently {currentState.NumberOfItems} things in your basket. Total weight {currentState.TotalWeight} kg.");
 
             await FetchBasket();
 
@@ -112,6 +121,8 @@ namespace EventStorePlayground
             {
                 Apple => "Apple",
                 Pear => "Pear",
+                Key => "Key",
+                PostIt => "Post-it",
                 _ => "Unknown",
             };
         }
@@ -121,6 +132,7 @@ namespace EventStorePlayground
     public interface IThing
     {
         decimal Weight { get; }
+        TypeOfThing TypeOfThing { get; }
         string Id { get; }
     }
 
@@ -142,6 +154,7 @@ namespace EventStorePlayground
         public string Id { get; }
         public decimal Weight { get; }
         public FruitCondition FruitCondition { get; }
+        public TypeOfThing TypeOfThing => TypeOfThing.Fruit;
 
         public Apple(string id, decimal weight, FruitCondition fruitCondition)
         {
@@ -156,6 +169,7 @@ namespace EventStorePlayground
         public string Id { get; }
         public decimal Weight { get; }
         public FruitCondition FruitCondition { get; }
+        public TypeOfThing TypeOfThing => TypeOfThing.Fruit;
 
         public Pear(string id, decimal weight, FruitCondition fruitCondition)
         {
@@ -170,6 +184,7 @@ namespace EventStorePlayground
         public string Id { get; }
         public decimal Weight { get; }
         public FruitCondition FruitCondition { get; }
+        public TypeOfThing TypeOfThing => TypeOfThing.Fruit;
 
         public SomeFruit(string id, decimal weight, FruitCondition fruitCondition)
         {
@@ -183,12 +198,39 @@ namespace EventStorePlayground
     {
         public string Id { get; }
         public decimal Weight { get; }
+        public string Owner { get; }
 
-        public Key(string id, decimal weight)
+        public TypeOfThing TypeOfThing => TypeOfThing.Key;
+
+        public Key(string id, decimal weight, string owner)
         {
             Id = id;
             Weight = weight;
+            Owner = owner;
         }
+    }
 
+    public class PostIt : IThing
+    {
+        public string Id { get; }
+        public decimal Weight { get; }
+        public string Text { get; }
+
+        public TypeOfThing TypeOfThing => TypeOfThing.PostIt;
+
+        public PostIt(string id, decimal weight, string text)
+        {
+            Id = id;
+            Weight = weight;
+            Text = text;
+        }
+    }
+
+    public enum TypeOfThing
+    {
+        Unknown = 0,
+        Fruit,
+        Key,
+        PostIt
     }
 }

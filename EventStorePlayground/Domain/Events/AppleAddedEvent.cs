@@ -1,17 +1,19 @@
 ﻿namespace EventStorePlayground.Domain.Events
 {
-    public class AppleAddedEvent : IDomainEvent
+    public class AppleAddedEvent : ThingAddedEvent
     {
-        public AppleAddedEvent(string id, decimal weight, FruitCondition fruitCondition)
+        public AppleAddedEvent(string id, decimal weight, FruitCondition fruitCondition) : base(id, TypeOfThing.Fruit, weight)
         {
-            Id = id;
-            Weight = weight;
             FruitCondition = fruitCondition;
         }
 
-        public string Id { get; }
-        public decimal Weight { get; }
         public FruitCondition FruitCondition { get; }
+    }
+
+    public class FruitGrabbedEvent : ThingGrabbedEvent
+    {
+        public FruitGrabbedEvent(string id) : base(id)
+        { }
     }
 
     public class ThingGrabbedEvent : IDomainEvent

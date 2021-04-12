@@ -1,16 +1,13 @@
 ﻿namespace EventStorePlayground.Domain.Events
 {
-    public class UnknownFruitAddedEvent : IDomainEvent
+    public class UnknownFruitAddedEvent : ThingAddedEvent
     {
         public UnknownFruitAddedEvent(string id, decimal weight, FruitCondition fruitCondition)
+            : base(id, TypeOfThing.Fruit, weight)
         {
-            Id = id;
-            Weight = weight;
             FruitCondition = fruitCondition;
         }
 
-        public string Id { get; }
-        public decimal Weight { get; }
         public FruitCondition FruitCondition { get; }
     }
 }

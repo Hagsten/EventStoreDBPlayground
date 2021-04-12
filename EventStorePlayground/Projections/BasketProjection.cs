@@ -1,6 +1,7 @@
 ﻿using EventStore.Client;
 using EventStorePlayground.Domain;
 using EventStorePlayground.Domain.Events;
+using EventStorePlayground.ReadModels;
 using Newtonsoft.Json;
 using System;
 using System.Linq;
@@ -34,6 +35,71 @@ namespace EventStorePlayground.Projections
                 nameof(AppleAddedEvent) => JsonConvert.DeserializeObject<AppleAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(PearAddedEvent) => JsonConvert.DeserializeObject<PearAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(ThingGrabbedEvent) => JsonConvert.DeserializeObject<ThingGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(FruitGrabbedEvent) => JsonConvert.DeserializeObject<FruitGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(UnknownFruitAddedEvent) => JsonConvert.DeserializeObject<UnknownFruitAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                _ => throw new NotImplementedException()
+            };
+        }
+    }
+
+    public class TotalItemsProjection
+    {
+        private readonly Store _store;
+
+        public TotalItemsProjection()
+        {
+            _store = new Store();
+        }
+
+        public async Task<CurrentThings> Project(string baskedId)
+        {
+            var eventStream = await _store.GetEventStream("basket", baskedId);
+
+            var events = eventStream.Select(Deserialize).ToArray();
+
+            return CurrentThings.Replay(events);
+        }
+
+        private static IDomainEvent Deserialize(ResolvedEvent e)
+        {
+            return e.Event.EventType switch
+            {
+                nameof(AppleAddedEvent) => JsonConvert.DeserializeObject<AppleAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(PearAddedEvent) => JsonConvert.DeserializeObject<PearAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(ThingGrabbedEvent) => JsonConvert.DeserializeObject<ThingGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(FruitGrabbedEvent) => JsonConvert.DeserializeObject<FruitGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(UnknownFruitAddedEvent) => JsonConvert.DeserializeObject<UnknownFruitAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                _ => throw new NotImplementedException()
+            };
+        }
+    }
+
+    public class AllThingsEverPutIntoBasketProjection
+    {
+        private readonly Store _store;
+
+        public AllThingsEverPutIntoBasketProjection()
+        {
+            _store = new Store();
+        }
+
+        public async Task<AllThingsEverPutIntoBasket> Project(string baskedId)
+        {
+            var eventStream = await _store.GetEventStream("basket", baskedId);
+
+            var events = eventStream.Select(Deserialize).ToArray();
+
+            return AllThingsEverPutIntoBasket.Replay(events);
+        }
+
+        private static IDomainEvent Deserialize(ResolvedEvent e)
+        {
+            return e.Event.EventType switch
+            {
+                nameof(AppleAddedEvent) => JsonConvert.DeserializeObject<AppleAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(PearAddedEvent) => JsonConvert.DeserializeObject<PearAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(ThingGrabbedEvent) => JsonConvert.DeserializeObject<ThingGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(FruitGrabbedEvent) => JsonConvert.DeserializeObject<FruitGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(UnknownFruitAddedEvent) => JsonConvert.DeserializeObject<UnknownFruitAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 _ => throw new NotImplementedException()
             };

@@ -76,6 +76,15 @@ namespace EventStorePlayground.Domain
             Apply((dynamic)ev);
         }
 
+        internal void AddThing(IThing thing)
+        {
+            var ev = new ThingAddedEvent(thing.Id, thing.TypeOfThing, thing.Weight);
+
+            _events.Add(ev);
+
+            Apply((dynamic)ev);
+        }
+
         internal void GrabAThing(string thingId)
         {
             var theThing = _things.SingleOrDefault(x => x.Id == thingId);
@@ -85,8 +94,8 @@ namespace EventStorePlayground.Domain
                 throw new System.Exception("no no, someone already took it out");
             }
 
-            var ev = new ThingGrabbedEvent(thingId);
-            
+            var ev = theThing is IFruit ? new FruitGrabbedEvent(thingId) : new ThingGrabbedEvent(thingId);
+
             _events.Add(ev);
 
             Apply((dynamic)ev);
