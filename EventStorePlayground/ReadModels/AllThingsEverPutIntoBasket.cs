@@ -1,4 +1,6 @@
 ﻿using EventStorePlayground.Domain.Events;
+using EventStorePlayground.Domains;
+using EventStorePlayground.Domains.Basket.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;

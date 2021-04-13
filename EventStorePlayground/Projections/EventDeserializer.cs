@@ -1,5 +1,7 @@
 ﻿using EventStore.Client;
-using EventStorePlayground.Domain.Events;
+using EventStorePlayground.Domains;
+using EventStorePlayground.Domains.Basket.Events;
+using EventStorePlayground.Domains.Fruit.Events;
 using Newtonsoft.Json;
 using System;
 using System.Text;

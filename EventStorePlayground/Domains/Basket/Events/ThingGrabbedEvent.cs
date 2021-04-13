@@ -1,4 +1,6 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿using EventStorePlayground.Domains;
+
+namespace EventStorePlayground.Domains.Basket.Events
 {
     public class ThingGrabbedEvent : IDomainEvent
     {

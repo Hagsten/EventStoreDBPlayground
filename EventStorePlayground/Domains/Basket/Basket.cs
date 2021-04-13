@@ -1,8 +1,11 @@
 ﻿using EventStorePlayground.Domain.Events;
+using EventStorePlayground.Domains;
+using EventStorePlayground.Domains.Basket;
+using EventStorePlayground.Domains.Basket.Events;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EventStorePlayground.Domain
+namespace EventStorePlayground.Domain.Aggregates
 {
     public class Basket
     {
@@ -41,7 +44,7 @@ namespace EventStorePlayground.Domain
         {
             _things.Add(new Pear(e.Id, e.Weight, e.FruitCondition));
         }
-   
+
         private void Apply(ThingGrabbedEvent e)
         {
             var theThing = _things.SingleOrDefault(x => x.Id == e.Id);

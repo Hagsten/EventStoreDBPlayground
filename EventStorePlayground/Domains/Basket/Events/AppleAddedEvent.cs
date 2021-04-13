@@ -1,4 +1,6 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿using EventStorePlayground.Domain.Events;
+
+namespace EventStorePlayground.Domains.Basket.Events
 {
     public class AppleAddedEvent : ThingAddedEvent
     {
@@ -9,4 +11,10 @@
 
         public FruitCondition FruitCondition { get; }
     }
+
+    public enum TypeOfFruit
+    {
+        Apple = 0,
+        Pear
+    };
 }

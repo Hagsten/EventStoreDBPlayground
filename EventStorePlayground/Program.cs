@@ -1,5 +1,5 @@
 ﻿using EventStorePlayground.CommandHandlers;
-using EventStorePlayground.Domain;
+using EventStorePlayground.Domains.Basket;
 using EventStorePlayground.Projections;
 using EventStorePlayground.ReadModels;
 using System;

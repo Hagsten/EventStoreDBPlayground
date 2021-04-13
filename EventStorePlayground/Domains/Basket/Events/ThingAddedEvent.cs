@@ -1,4 +1,7 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿using EventStorePlayground.Domains;
+using EventStorePlayground.Domains.Basket;
+
+namespace EventStorePlayground.Domain.Events
 {
     public abstract class ThingAddedEvent : IDomainEvent
     {

@@ -1,4 +1,4 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿namespace EventStorePlayground.Domains.Fruit.Events
 {
     public class FruitDecomposedEvent : IDomainEvent
     {

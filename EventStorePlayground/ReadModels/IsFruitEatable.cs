@@ -1,4 +1,5 @@
-﻿using EventStorePlayground.Domain.Events;
+﻿using EventStorePlayground.Domains;
+using EventStorePlayground.Domains.Fruit.Events;
 using System.Collections.Generic;
 
 namespace EventStorePlayground.ReadModels

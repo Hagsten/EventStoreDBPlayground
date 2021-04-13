@@ -1,5 +1,5 @@
 ﻿using EventStore.Client;
-using EventStorePlayground.Domain.Events;
+using EventStorePlayground.Domains;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;

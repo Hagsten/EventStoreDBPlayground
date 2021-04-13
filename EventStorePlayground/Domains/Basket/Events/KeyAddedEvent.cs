@@ -1,4 +1,6 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿using EventStorePlayground.Domain.Events;
+
+namespace EventStorePlayground.Domains.Basket.Events
 {
     public class KeyAddedEvent : ThingAddedEvent
     {

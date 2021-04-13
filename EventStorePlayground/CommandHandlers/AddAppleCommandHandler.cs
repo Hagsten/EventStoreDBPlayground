@@ -1,5 +1,5 @@
 ﻿using EventStorePlayground.Data;
-using EventStorePlayground.Domain;
+using EventStorePlayground.Domains.Basket;
 using EventStorePlayground.Projections;
 using System.Threading.Tasks;
 

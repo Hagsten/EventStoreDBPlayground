@@ -1,4 +1,4 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿namespace EventStorePlayground.Domains.Basket.Events
 {
     public class FruitGrabbedEvent : ThingGrabbedEvent
     {

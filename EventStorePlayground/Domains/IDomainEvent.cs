@@ -1,4 +1,4 @@
-﻿namespace EventStorePlayground.Domain.Events
+﻿namespace EventStorePlayground.Domains
 {
     public interface IDomainEvent
     {

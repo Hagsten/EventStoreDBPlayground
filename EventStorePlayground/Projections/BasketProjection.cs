@@ -1,5 +1,5 @@
 ﻿using EventStorePlayground.Data;
-using EventStorePlayground.Domain;
+using EventStorePlayground.Domain.Aggregates;
 using System.Linq;
 using System.Threading.Tasks;
 

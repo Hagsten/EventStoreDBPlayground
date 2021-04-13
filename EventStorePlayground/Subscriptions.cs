@@ -1,6 +1,10 @@
 ﻿using EventStore.Client;
+using EventStorePlayground.CommandHandlers;
 using EventStorePlayground.Data;
-using EventStorePlayground.Domain.Events;
+using EventStorePlayground.Domains;
+using EventStorePlayground.Domains.Basket.Events;
+using EventStorePlayground.Domains.Fruit;
+using EventStorePlayground.Domains.Fruit.Events;
 using EventStorePlayground.Projections;
 using Newtonsoft.Json;
 using System;
@@ -29,13 +33,7 @@ namespace EventStorePlayground
                     {
                         var e = JsonConvert.DeserializeObject<FruitGrabbedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span));
 
-                        var isEatable = await new FruitEatableProjection().Project(e.Id);
-
-                        IDomainEvent newEvent = isEatable.Value ? new FruitEatenEvent(e.Id) : new FruitThrownAwayEvent(e.Id);
-
-                        Console.WriteLine($"That fruit is {(isEatable.Value ? "fresh, lets eat it!" : "rotten, lets throw it away")}" + Environment.NewLine);
-
-                        await _store.Add("fruit", e.Id, new[] { newEvent });
+                        await new EatFruitCommandHandler().Handle(e.Id);
                     }
                     catch (Exception e)
                     {

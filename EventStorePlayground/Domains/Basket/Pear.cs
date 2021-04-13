@@ -1,4 +1,4 @@
-﻿namespace EventStorePlayground.Domain
+﻿namespace EventStorePlayground.Domains.Basket
 {
     public class Pear : IFruit
     {
