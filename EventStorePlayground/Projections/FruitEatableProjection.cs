@@ -1,26 +1,26 @@
 ﻿using EventStorePlayground.Data;
-using EventStorePlayground.Domain;
+using EventStorePlayground.ReadModels;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace EventStorePlayground.Projections
 {
-    public class BasketProjection
+    public class FruitEatableProjection
     {
         private readonly Store _store;
 
-        public BasketProjection()
+        public FruitEatableProjection()
         {
             _store = new Store();
         }
 
-        public async Task<Basket> Project(string baskedId)
+        public async Task<IsFruitEatable> Project(string fruitId)
         {
-            var eventStream = await _store.GetEventStream("basket", baskedId);
+            var eventStream = await _store.GetEventStream("fruit", fruitId);
 
             var events = eventStream.Select(EventDeserializer.Deserialize).ToArray();
 
-            return Basket.Replay(events);
-        }       
+            return IsFruitEatable.Replay(events);
+        }
     }
 }

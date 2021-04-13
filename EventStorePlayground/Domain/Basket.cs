@@ -41,17 +41,17 @@ namespace EventStorePlayground.Domain
         {
             _things.Add(new Pear(e.Id, e.Weight, e.FruitCondition));
         }
-
-        private void Apply(UnknownFruitAddedEvent e)
-        {
-            _things.Add(new SomeFruit(e.Id, e.Weight, e.FruitCondition));
-        }
-
+   
         private void Apply(ThingGrabbedEvent e)
         {
             var theThing = _things.SingleOrDefault(x => x.Id == e.Id);
 
             _things.Remove(theThing);
+        }
+
+        private void Apply(KeyAddedEvent e)
+        {
+            _things.Add(new Key(e.Id, e.Weight, e.Owner));
         }
 
         internal void AddFruit(IFruit fruit)
@@ -76,9 +76,9 @@ namespace EventStorePlayground.Domain
             Apply((dynamic)ev);
         }
 
-        internal void AddThing(IThing thing)
+        internal void AddKey(Key key)
         {
-            var ev = new ThingAddedEvent(thing.Id, thing.TypeOfThing, thing.Weight);
+            var ev = new KeyAddedEvent(key.Id, key.Weight, key.Owner);
 
             _events.Add(ev);
 

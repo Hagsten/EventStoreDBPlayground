@@ -1,4 +1,6 @@
-﻿using EventStorePlayground.Projections;
+﻿using EventStorePlayground.Data;
+using EventStorePlayground.Domain;
+using EventStorePlayground.Projections;
 using System.Threading.Tasks;
 
 namespace EventStorePlayground.CommandHandlers

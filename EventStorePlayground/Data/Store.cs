@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventStorePlayground
+namespace EventStorePlayground.Data
 {
     public class Store
     {

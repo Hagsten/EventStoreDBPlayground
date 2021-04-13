@@ -1,236 +1,169 @@
-﻿using EventStore.Client;
-using EventStorePlayground.CommandHandlers;
-using EventStorePlayground.Domain.Events;
+﻿using EventStorePlayground.CommandHandlers;
+using EventStorePlayground.Domain;
 using EventStorePlayground.Projections;
-using Newtonsoft.Json;
+using EventStorePlayground.ReadModels;
 using System;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace EventStorePlayground
 {
-
     class Program
     {
+        private const string BasketId = "kitchen-basket";
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello EventStoreDB!");
+            Console.WriteLine("Hello EventStoreDB!" + Environment.NewLine);
 
-            SubscribeToFruitGrabbedEvents().Wait();
+            Subscriptions.ConsoleLogAllEvents().Wait();
+            Subscriptions.WhenFruitGrabbed().Wait();
 
             RenderMenu().Wait();
         }
 
-        //TODO: Another subscription to be added in addition to this.
-        //All things added --> Its own stream. Right? --> Used in Readmodel AllThingsEverPutIntoBasket
-        private static async Task SubscribeToFruitGrabbedEvents()
-        {
-            var store = new Store();
-            var client = new EventStoreClient(EventStoreClientSettings.Create("esdb://localhost:2113?tls=false&keepAliveInterval=-1&keepAliveTimeout=-1"));
-
-            await client.SubscribeToStreamAsync("$et-FruitGrabbedEvent", StreamPosition.End,
-                async (subscription, evnt, cancellationToken) =>
-                {
-                    Console.WriteLine($"Received event {evnt.OriginalEventNumber}@{evnt.OriginalStreamId}");
-
-                    try
-                    {
-                        var e = JsonConvert.DeserializeObject<FruitGrabbedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span));
-
-                        await store.Add("fruit", e.Id, new[] { new FruitEatenEvent(e.Id) });
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Error in subscr.");
-                    }
-                }, true);
-        }
-
         public static async Task RenderMenu()
         {
-            var totalItemsProjection = new TotalItemsProjection();
-            var p = new AllThingsEverPutIntoBasketProjection();
+            var p = new ProjectionFromBasket<AllThingsEverPutIntoBasket>(AllThingsEverPutIntoBasket.Replay);
 
-            var currentState = await totalItemsProjection.Project("kitchen-basket");
-            var allStuff = p.Project("kitchen-basket");
+            var allStuff = await p.Project(BasketId);
 
-            Console.WriteLine("Good day! This is your ultimate basket app");
-            Console.WriteLine($"There are currently {currentState.NumberOfItems} things in your basket. Total weight {currentState.TotalWeight} kg.");
-
+            Console.WriteLine("Good day! This is your ultimate basket app" + Environment.NewLine);
+            
             await FetchBasket();
+            
+            Console.Write("What thing are you interested in? (Apple|Pear|key): ");
+            string cmd;
 
-            var cmd = "";
-
-            Console.WriteLine("{Thing}.{Action}.{Property} ===> i.e Apple.A.F ==> Adds a Fresh Apple");
-            Console.WriteLine("A:Key ===> Adds a key");
-
-            while ((cmd = Console.ReadLine()) != "exit")
+            while ((cmd = Console.ReadLine().ToLower()) != "exit")
             {
-                if (cmd == "Apple.A.F")
+                try
                 {
-                    Console.Write("Adding a nice fresh apple. Give it a unique name: ");
+                    if (cmd == "apple")
+                    {
+                        Console.Write("Apples! Do you want to add (a) or take (t) one out?: ");
 
-                    var id = Console.ReadLine();
+                        var grab = Console.ReadLine().ToLower() == "t";
 
-                    await new AddAppleCommandHandler().Handle("kitchen-basket", id, 0.2M, FruitCondition.Fresh);
+                        if (grab)
+                        {
+                            var apples = await new ProjectionFromBasket<ApplesInBasket>(ApplesInBasket.Replay).Project(BasketId);
+
+                            Console.WriteLine("Choose from these apples:");
+
+                            Console.Write(string.Join($"{Environment.NewLine}", apples.AppleIds));
+                            Console.Write(Environment.NewLine + Environment.NewLine + "Which one?: ");
+
+                            await new TakeThingOutCommandHandler().Handle(BasketId, Console.ReadLine());
+                        }
+                        else
+                        {
+                            Console.WriteLine("Adding a nice fresh apple.");
+                            Console.Write("Give it a unique name: ");
+
+                            var id = Console.ReadLine();
+
+                            Console.Write("How much does it weight (kg)?: ");
+
+                            var weight = decimal.Parse(Console.ReadLine());
+
+                            await new AddAppleCommandHandler().Handle(BasketId, id, weight, FruitCondition.Fresh);
+                        }
+                    }
+
+                    else if (cmd == "pear")
+                    {
+                        Console.Write("Pears! Do you want to add (a) or take (t) one out?: ");
+
+                        var grab = Console.ReadLine().ToLower() == "t";
+
+                        if (grab)
+                        {
+                            var pears = await new ProjectionFromBasket<PearsInBasket>(PearsInBasket.Replay).Project(BasketId);
+
+                            Console.WriteLine("Choose from these pears:");
+
+                            Console.Write(string.Join($"{Environment.NewLine}", pears.PearIds));
+                            Console.Write(Environment.NewLine + Environment.NewLine + "Which one?: ");
+
+                            await new TakeThingOutCommandHandler().Handle(BasketId, Console.ReadLine());
+                        }
+                        else
+                        {
+                            Console.WriteLine("Adding a nice fresh pear.");
+                            Console.Write("Give it a unique name: ");
+
+                            var id = Console.ReadLine();
+
+                            Console.Write("How much does it weight (kg)?: ");
+
+                            var weight = decimal.Parse(Console.ReadLine());
+
+                            await new AddPearCommandHandler().Handle(BasketId, id, weight, FruitCondition.Fresh);
+                        }
+                    }
+
+                    else if (cmd == "key")
+                    {
+                        Console.Write("Keys! In the fruit basket?! Do you want to add (a) or take (t) one out?: ");
+
+                        var grab = Console.ReadLine().ToLower() == "t";
+
+                        if (grab)
+                        {
+                            var keys = await new ProjectionFromBasket<KeysInBasket>(KeysInBasket.Replay).Project(BasketId);
+
+                            Console.WriteLine("Choose from these keys:");
+
+                            Console.Write(string.Join($"{Environment.NewLine}", keys.KeyIds));
+                            Console.Write(Environment.NewLine + Environment.NewLine + "Which one?: ");
+
+                            await new TakeThingOutCommandHandler().Handle(BasketId, Console.ReadLine());
+                        }
+                        else
+                        {
+                            Console.WriteLine("Adding a key.");
+                            Console.Write("Give it a unique name: ");
+
+                            var id = Console.ReadLine();
+
+                            Console.Write("How much does it weight (kg)?: ");
+
+                            var weight = decimal.Parse(Console.ReadLine());
+
+                            Console.Write("Who is the owner of this key?: ");
+
+                            var owner = Console.ReadLine();
+
+                            await new AddKeyCommandHandler().Handle(BasketId, id, weight, owner);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("No such command");
+                    }
+
+                    await Task.Delay(500);                                        
                 }
-
-                if (cmd == "Pear.A.F")
+                catch (Exception e)
                 {
-                    Console.WriteLine("Adding a nice fresh large pear. Give it a unique name: ");
-
-                    var id = Console.ReadLine();
-
-                    await new AddPearCommandHandler().Handle("kitchen-basket", id, 0.34M, FruitCondition.Fresh);
-                }
-
-                if (cmd == "Pear.E" || cmd == "Apple.E")
-                {
-                    Console.WriteLine("Which one do you want to eat?");
-
-                    await new EatFruitCommandHandler().Handle("kitchen-basket", Console.ReadLine());
-
-                    Console.WriteLine("I bet that was yummy!");
+                    Console.WriteLine($"That did not go well: {e.Message}");
                 }
 
                 await FetchBasket();
+                Console.Write("What thing are you interested in? (Apple|Pear|key): ");
             }
         }
 
         private static async Task FetchBasket()
         {
-            var basketProjection = new BasketProjection();
-
-            var b = await basketProjection.Project("kitchen-basket");
-
-            Console.WriteLine($"There are currently {b.Things.Count} things in your basket. Total weight {b.TotalWeight} kg.");
-
-            var apples = b.Things.Where(x => GetTypeOfThing(x) == "Apple").ToArray();
-            var pears = b.Things.Where(x => GetTypeOfThing(x) == "Pear").ToArray();
-
-            Console.WriteLine($"Apples: {apples.Length} with weight of {apples.Sum(x => x.Weight)}kg");
-            Console.WriteLine($"Pears: {pears.Length} with weight of {pears.Sum(x => x.Weight)}kg");
-
-            Console.WriteLine("What do you want to do?");
+            var totalItemsProjection = new ProjectionFromBasket<CurrentThings>(CurrentThings.Replay);
+            var currentState = await totalItemsProjection.Project("kitchen-basket");
+            
+            Console.WriteLine($"There are currently {currentState.NumberOfItems} things in your basket. Total weight {currentState.TotalWeight} kg.");
+            Console.WriteLine($"Apples: {string.Join(", ", currentState.Apples)}");
+            Console.WriteLine($"Pears:  {string.Join(", ", currentState.Pears)}");
+            Console.WriteLine($"Keys:   {string.Join(", ", currentState.Keys)}");
+            Console.WriteLine(Environment.NewLine);
         }
-
-        private static string GetTypeOfThing(IThing thing)
-        {
-            return thing switch
-            {
-                Apple => "Apple",
-                Pear => "Pear",
-                Key => "Key",
-                PostIt => "Post-it",
-                _ => "Unknown",
-            };
-        }
-
-    }
-
-    public interface IThing
-    {
-        decimal Weight { get; }
-        TypeOfThing TypeOfThing { get; }
-        string Id { get; }
-    }
-
-    public interface IFruit : IThing
-    {
-        FruitCondition FruitCondition { get; }
-    }
-
-    public enum FruitCondition
-    {
-        Fresh = 0,
-        Mature,
-        Rotten,
-        Decomposed
-    }
-
-    public class Apple : IFruit
-    {
-        public string Id { get; }
-        public decimal Weight { get; }
-        public FruitCondition FruitCondition { get; }
-        public TypeOfThing TypeOfThing => TypeOfThing.Fruit;
-
-        public Apple(string id, decimal weight, FruitCondition fruitCondition)
-        {
-            Id = id;
-            Weight = weight;
-            FruitCondition = fruitCondition;
-        }
-    }
-
-    public class Pear : IFruit
-    {
-        public string Id { get; }
-        public decimal Weight { get; }
-        public FruitCondition FruitCondition { get; }
-        public TypeOfThing TypeOfThing => TypeOfThing.Fruit;
-
-        public Pear(string id, decimal weight, FruitCondition fruitCondition)
-        {
-            Id = id;
-            Weight = weight;
-            FruitCondition = fruitCondition;
-        }
-    }
-
-    public class SomeFruit : IFruit
-    {
-        public string Id { get; }
-        public decimal Weight { get; }
-        public FruitCondition FruitCondition { get; }
-        public TypeOfThing TypeOfThing => TypeOfThing.Fruit;
-
-        public SomeFruit(string id, decimal weight, FruitCondition fruitCondition)
-        {
-            Id = id;
-            Weight = weight;
-            FruitCondition = fruitCondition;
-        }
-    }
-
-    public class Key : IThing
-    {
-        public string Id { get; }
-        public decimal Weight { get; }
-        public string Owner { get; }
-
-        public TypeOfThing TypeOfThing => TypeOfThing.Key;
-
-        public Key(string id, decimal weight, string owner)
-        {
-            Id = id;
-            Weight = weight;
-            Owner = owner;
-        }
-    }
-
-    public class PostIt : IThing
-    {
-        public string Id { get; }
-        public decimal Weight { get; }
-        public string Text { get; }
-
-        public TypeOfThing TypeOfThing => TypeOfThing.PostIt;
-
-        public PostIt(string id, decimal weight, string text)
-        {
-            Id = id;
-            Weight = weight;
-            Text = text;
-        }
-    }
-
-    public enum TypeOfThing
-    {
-        Unknown = 0,
-        Fruit,
-        Key,
-        PostIt
     }
 }
