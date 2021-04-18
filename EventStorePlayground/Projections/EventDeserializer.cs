@@ -1,6 +1,7 @@
 ﻿using EventStore.Client;
 using EventStorePlayground.Domains;
 using EventStorePlayground.Domains.Basket.Events;
+using EventStorePlayground.Domains.Basket.Events.Snapshot;
 using EventStorePlayground.Domains.Fruit.Events;
 using Newtonsoft.Json;
 using System;
@@ -14,6 +15,7 @@ namespace EventStorePlayground.Projections
         {
             return e.Event.EventType switch
             {
+                nameof(AllThingsEverInBasketSbapshotEvent) => JsonConvert.DeserializeObject<AllThingsEverInBasketSbapshotEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(AppleAddedEvent) => JsonConvert.DeserializeObject<AppleAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(PearAddedEvent) => JsonConvert.DeserializeObject<PearAddedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(ThingGrabbedEvent) => JsonConvert.DeserializeObject<ThingGrabbedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
@@ -23,6 +25,7 @@ namespace EventStorePlayground.Projections
                 nameof(FruitEatenEvent) => JsonConvert.DeserializeObject<FruitEatenEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(FruitDecomposedEvent) => JsonConvert.DeserializeObject<FruitDecomposedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 nameof(FruitThrownAwayEvent) => JsonConvert.DeserializeObject<FruitThrownAwayEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
+                nameof(FruitCreatedEvent) => JsonConvert.DeserializeObject<FruitCreatedEvent>(Encoding.UTF8.GetString(e.Event.Data.Span)),
                 _ => throw new NotImplementedException()
             };
         }

@@ -1,8 +1,13 @@
 ﻿using EventStorePlayground.CommandHandlers;
+using EventStorePlayground.Data;
 using EventStorePlayground.Domains.Basket;
+using EventStorePlayground.Domains.Basket.Events;
+using EventStorePlayground.Domains.Basket.Events.Snapshot;
 using EventStorePlayground.Projections;
 using EventStorePlayground.ReadModels;
 using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace EventStorePlayground
@@ -15,23 +20,37 @@ namespace EventStorePlayground
         {
             Console.WriteLine("Hello EventStoreDB!" + Environment.NewLine);
 
-            Subscriptions.ConsoleLogAllEvents().Wait();
-            Subscriptions.WhenFruitGrabbed().Wait();
+            //Subscriptions.ConsoleLogAllEvents().Wait();
+            //Subscriptions.WhenFruitGrabbed().Wait();
+            //Subscriptions.WhenFruitAdded().Wait();
+
+           // LargeAmountOfData().Wait();
 
             RenderMenu().Wait();
         }
 
+        private static async Task LargeAmountOfData()
+        {
+            var store = new Store();
+            var events = Enumerable.Range(0, 10000).Select((i) => new AppleAddedEvent(Guid.NewGuid().ToString(), 1.0M, FruitCondition.Fresh)).ToArray();
+                
+            await store.Add("basket", BasketId, events);
+        }
+
         public static async Task RenderMenu()
         {
-            var p = new ProjectionFromBasket<AllThingsEverPutIntoBasket>(AllThingsEverPutIntoBasket.Replay);
-
-            var allStuff = await p.Project(BasketId);
+            var sw = new Stopwatch();
+            sw.Start();
+            
+            var allThings = await new ProjectionFromBasket<AllThingsEverPutIntoBasket>(AllThingsEverPutIntoBasket.Replay).Project(BasketId, "all");
+            Console.WriteLine(sw.ElapsedMilliseconds);
+            sw.Stop();
 
             Console.WriteLine("Good day! This is your ultimate basket app" + Environment.NewLine);
-            
+
             await FetchBasket();
-            
-            Console.Write("What thing are you interested in? (Apple|Pear|key): ");
+
+            Console.Write("What thing are you interested in? (Apple|Pear|key|snapshot): ");
             string cmd;
 
             while ((cmd = Console.ReadLine().ToLower()) != "exit")
@@ -137,12 +156,23 @@ namespace EventStorePlayground
                             await new AddKeyCommandHandler().Handle(BasketId, id, weight, owner);
                         }
                     }
+                    else if(cmd == "snapshot")
+                    {
+                        Console.WriteLine("This will create snapshots for all supported models, proceed? (y)");
+
+                        var answer = Console.ReadLine();
+
+                        if(answer == "y")
+                        {
+                            await CreateSomeSnapshots();
+                        }
+                    }
                     else
                     {
                         Console.WriteLine("No such command");
                     }
 
-                    await Task.Delay(500);                                        
+                    await Task.Delay(500);
                 }
                 catch (Exception e)
                 {
@@ -154,13 +184,22 @@ namespace EventStorePlayground
             }
         }
 
+        private static async Task CreateSomeSnapshots()
+        {
+            var store = new Store();
+
+            var allThings = await new ProjectionFromBasket<AllThingsEverPutIntoBasket>(AllThingsEverPutIntoBasket.Replay).Project(BasketId);
+
+            await store.Snapshot($"basket-{BasketId}", "all", new AllThingsEverInBasketSbapshotEvent(AllThingsEverPutIntoBasketSnapshot.FromModel(allThings)));
+        }
+
         private static async Task FetchBasket()
         {
             var totalItemsProjection = new ProjectionFromBasket<CurrentThings>(CurrentThings.Replay);
             var currentState = await totalItemsProjection.Project("kitchen-basket");
-            
+
             Console.WriteLine($"There are currently {currentState.NumberOfItems} things in your basket. Total weight {currentState.TotalWeight} kg.");
-            Console.WriteLine($"Apples: {string.Join(", ", currentState.Apples)}");
+            Console.WriteLine($"Apples: {string.Join(", ", currentState.Apples.Take(5))}");
             Console.WriteLine($"Pears:  {string.Join(", ", currentState.Pears)}");
             Console.WriteLine($"Keys:   {string.Join(", ", currentState.Keys)}");
             Console.WriteLine(Environment.NewLine);

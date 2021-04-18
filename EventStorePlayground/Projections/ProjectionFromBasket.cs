@@ -1,6 +1,5 @@
 ﻿using EventStorePlayground.Data;
 using EventStorePlayground.Domains;
-using EventStorePlayground.ReadModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,9 +18,9 @@ namespace EventStorePlayground.Projections
             this.replayer = replayer;
         }
 
-        public async Task<T> Project(string baskedId)
+        public async Task<T> Project(string baskedId, string model = null)
         {
-            var eventStream = await _store.GetEventStream("basket", baskedId);
+            var eventStream = await _store.GetEventStream("basket", baskedId, model);
 
             var events = eventStream.Select(EventDeserializer.Deserialize).ToArray();
 

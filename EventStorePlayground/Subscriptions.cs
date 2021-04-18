@@ -1,11 +1,8 @@
 ﻿using EventStore.Client;
 using EventStorePlayground.CommandHandlers;
 using EventStorePlayground.Data;
-using EventStorePlayground.Domains;
+using EventStorePlayground.Domain.Events;
 using EventStorePlayground.Domains.Basket.Events;
-using EventStorePlayground.Domains.Fruit;
-using EventStorePlayground.Domains.Fruit.Events;
-using EventStorePlayground.Projections;
 using Newtonsoft.Json;
 using System;
 using System.Text;
@@ -40,8 +37,33 @@ namespace EventStorePlayground
                         Console.WriteLine("Error in subscr. " + e.Message);
                     }
                 }, true);
-        } 
-        
+        }
+
+        public static async Task WhenFruitAdded()
+        {
+            await _client.SubscribeToAllAsync(Position.End,
+                async (subscription, evnt, cancellationToken) =>
+                {
+                    try
+                    {
+                        dynamic e = evnt.Event.EventType switch
+                        {
+                            "AppleAddedEvent" => JsonConvert.DeserializeObject<AppleAddedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span)),
+                            "PearAddedEvent" => JsonConvert.DeserializeObject<PearAddedEvent>(Encoding.UTF8.GetString(evnt.Event.Data.Span)),
+                            _ => null
+                        };
+                        
+                        Console.WriteLine($"{evnt.Event.EventNumber}");
+                        
+                        await new SummonFruitCommandHandler().Handle(e.Id, e.Weight, e.FruitCondition, TypeOfFruit.Apple);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error in subscr. " + e.Message);
+                    }
+                }, resolveLinkTos: true, filterOptions: new SubscriptionFilterOptions(EventTypeFilter.RegularExpression("AppleAddedEvent|PearAddedEvent")));
+        }
+
         public static async Task ConsoleLogAllEvents()
         {
             await _client.SubscribeToAllAsync(Position.End, async (subscription, evnt, cancellationToken) =>

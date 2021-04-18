@@ -24,6 +24,11 @@ namespace EventStorePlayground.Projections
 
             var events = eventStream.Select(EventDeserializer.Deserialize).ToArray();
 
+            if (!events.Any())
+            {
+                return null;
+            }
+
             return replayer(events);
         }
     }

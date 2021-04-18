@@ -16,11 +16,20 @@ namespace EventStorePlayground.Domains.Fruit
         public bool IsEaten { get; private set; }
         public bool InTrash { get; private set; }
 
-        public IReadOnlyCollection<IDomainEvent> Events { get; set; }
+        public IReadOnlyCollection<IDomainEvent> Events => _events.AsReadOnly();
 
         public FruitAggregate()
         {
             _events = new List<IDomainEvent>();
+        }
+
+        public static FruitAggregate CreateNew(string fruitId, decimal weight, FruitCondition condition, TypeOfFruit type)
+        {
+            var agg = new FruitAggregate();
+
+            agg.Summon(fruitId, weight, condition, type);
+
+            return agg;
         }
 
         public static FruitAggregate Replay(ICollection<IDomainEvent> events)
@@ -71,6 +80,15 @@ namespace EventStorePlayground.Domains.Fruit
             }
 
             InTrash = true;
+        }
+
+        private void Summon(string fruitId, decimal weight, FruitCondition condition, TypeOfFruit type)
+        {
+            var ev = new FruitCreatedEvent(fruitId, weight, condition, type);
+
+            _events.Add(ev);
+
+            Apply((dynamic)ev);
         }
 
         public void Eat()

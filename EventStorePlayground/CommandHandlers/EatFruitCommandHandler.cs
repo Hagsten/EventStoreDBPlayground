@@ -18,6 +18,11 @@ namespace EventStorePlayground.CommandHandlers
         {
             var fruit = await new ProjectionFromFruit<FruitAggregate>(FruitAggregate.Replay).Project(fruitId);
 
+            if(fruit == null)
+            {
+                throw new System.Exception($"{fruitId} was not found");
+            }
+
             fruit.Eat();
 
             await _store.Add("fruit", fruitId, fruit.Events);

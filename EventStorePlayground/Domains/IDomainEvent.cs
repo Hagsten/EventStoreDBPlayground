@@ -4,4 +4,7 @@
     {
         string Id { get; }
     }
+
+    public interface ISnapshotEvent : IDomainEvent
+    {}
 }

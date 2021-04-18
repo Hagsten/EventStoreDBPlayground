@@ -1,15 +1,16 @@
 ﻿using EventStorePlayground.Domain.Events;
 using EventStorePlayground.Domains;
 using EventStorePlayground.Domains.Basket.Events;
+using EventStorePlayground.Domains.Basket.Events.Snapshot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace EventStorePlayground.ReadModels
 {
-
     public class AllThingsEverPutIntoBasket
     {
+        public string Id { get; private set; }
         public int NumberOfApples { get; private set; }
         public int NumberOfPears { get; private set; }
         public int NumberOfKeys { get; private set; }
@@ -28,9 +29,9 @@ namespace EventStorePlayground.ReadModels
         {
             var model = new AllThingsEverPutIntoBasket();
 
-            foreach (var e in events.Where(x => x is ThingAddedEvent).Cast<ThingAddedEvent>())
+            foreach (var e in events.Where(x => x is ThingAddedEvent or ISnapshotEvent))
             {
-                model.Apply(e);
+                model.Apply((dynamic)e);
             }
 
             return model;
@@ -53,5 +54,14 @@ namespace EventStorePlayground.ReadModels
             NumberOfItems++;
         }
 
+        private void Apply(AllThingsEverInBasketSbapshotEvent e)
+        {
+            NumberOfApples = e.Snapshot.NumberOfApples;
+            NumberOfItems = e.Snapshot.NumberOfItems;
+            NumberOfKeys = e.Snapshot.NumberOfKeys;
+            NumberOfPears = e.Snapshot.NumberOfPears;
+            NumberOfPostIts = e.Snapshot.NumberOfPostIts;
+            NumberOfUnknown = e.Snapshot.NumberOfUnknown;
+        }
     }
 }
