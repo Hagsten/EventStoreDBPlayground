@@ -20,11 +20,11 @@ namespace EventStorePlayground
         {
             Console.WriteLine("Hello EventStoreDB!" + Environment.NewLine);
 
-            //Subscriptions.ConsoleLogAllEvents().Wait();
-            //Subscriptions.WhenFruitGrabbed().Wait();
-            //Subscriptions.WhenFruitAdded().Wait();
+            Subscriptions.ConsoleLogAllEvents().Wait();
+            Subscriptions.WhenFruitGrabbed().Wait();
+            Subscriptions.WhenFruitAdded().Wait();
 
-           // LargeAmountOfData().Wait();
+            // LargeAmountOfData().Wait();
 
             RenderMenu().Wait();
         }
